@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	jsonpatch "github.com/evanphx/json-patch"
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/rancher/wrangler/pkg/clients"
 	"github.com/rancher/wrangler/pkg/gvk"
 	"k8s.io/apimachinery/pkg/api/meta"
