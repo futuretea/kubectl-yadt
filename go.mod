@@ -1,4 +1,4 @@
-module github.com/ibuildthecloud/wtfk8s
+module github.com/futuretea/kubectl-yadt
 
 go 1.22.0
 

@@ -100,6 +100,6 @@ func listResources(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Println("\nUse 'wtfk8s watch <resource>' to watch a specific resource")
+	fmt.Println("\nUse 'kubectl-yadt watch <resource>' to watch a specific resource")
 	return nil
 }

@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ibuildthecloud/wtfk8s/pkg/differ"
-	"github.com/ibuildthecloud/wtfk8s/pkg/watcher"
+	"github.com/futuretea/kubectl-yadt/pkg/differ"
+	"github.com/futuretea/kubectl-yadt/pkg/watcher"
 	"github.com/manifoldco/promptui"
 	"github.com/rancher/wrangler/pkg/clients"
 	"github.com/rancher/wrangler/pkg/generic"
@@ -30,7 +30,7 @@ var watchCmd = &cobra.Command{
 	Use:   "watch [resources...]",
 	Short: "Watch Kubernetes resources and show changes",
 	Long: `Watch Kubernetes resources and print the delta in changes.
-Example: wtfk8s watch pods deployments`,
+Example: kubectl-yadt watch pods deployments`,
 	RunE: watchRun,
 }
 

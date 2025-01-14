@@ -1,13 +1,13 @@
 package main
 
 import (
-	"log"
+	"os"
 
-	"github.com/ibuildthecloud/wtfk8s/cmd"
+	"github.com/futuretea/kubectl-yadt/cmd"
 )
 
 func main() {
 	if err := cmd.Execute(); err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 }

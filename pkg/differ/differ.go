@@ -3,7 +3,7 @@ package differ
 import (
 	"fmt"
 
-	"github.com/ibuildthecloud/wtfk8s/pkg/printer"
+	"github.com/futuretea/kubectl-yadt/pkg/printer"
 	"github.com/rancher/wrangler/pkg/clients"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"

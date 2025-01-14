@@ -12,10 +12,10 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "wtfk8s",
-	Short: "A tool for watching Kubernetes resources",
-	Long: `wtfk8s is a command line tool that helps you monitor changes 
-in your Kubernetes cluster resources.`,
+	Use:   "yadt",
+	Short: "Watch and diff Kubernetes resources in real-time",
+	Long: `A tool for watching Kubernetes resources and showing changes in real-time.
+This tool can be used both as a standalone command and as a kubectl plugin.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Set default level to ERROR
 		logrus.SetLevel(logrus.ErrorLevel)

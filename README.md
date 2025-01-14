@@ -1,6 +1,8 @@
-# wtfk8s
+# kubectl-yadt
 
-A command-line tool for watching Kubernetes resources and showing changes in real-time.
+Yet Another Diff Tool for Kubernetes - Watch and diff resources in real-time.
+
+> This project is based on [ibuildthecloud/wtfk8s](https://github.com/ibuildthecloud/wtfk8s) with significant improvements.
 
 ## Features
 
@@ -14,7 +16,8 @@ A command-line tool for watching Kubernetes resources and showing changes in rea
 ## Installation
 
 ```bash
-go install github.com/futuretea/wtfk8s@latest
+# Download and install the binary
+go install github.com/futuretea/kubectl-yadt@latest
 ```
 
 ## Usage
@@ -22,48 +25,51 @@ go install github.com/futuretea/wtfk8s@latest
 ### Basic Usage
 
 ```bash
-# Watch a single resource
-wtfk8s watch pods
+# As kubectl plugin
+kubectl yadt watch pods
+
+# As standalone command
+kubectl-yadt watch pods
 
 # Watch multiple resources
-wtfk8s watch pods deployments services
+kubectl yadt watch pods deployments services
 
 # Interactive resource selection
-wtfk8s watch
+kubectl yadt watch
 ```
 
 ### Options
 
 ```bash
 # Watch resources in a specific namespace
-wtfk8s watch pods --namespace kube-system
+kubectl yadt watch pods --namespace kube-system
 
 # Ignore status changes
-wtfk8s watch pods --no-status
+kubectl yadt watch pods --no-status
 
 # Ignore metadata changes
-wtfk8s watch pods --no-meta
+kubectl yadt watch pods --no-meta
 
 # Enable debug logging
-wtfk8s watch pods --debug
+kubectl yadt watch pods --debug
 
 # Use specific kubeconfig
-wtfk8s watch pods --kubeconfig ~/.kube/other-config
+kubectl yadt watch pods --kubeconfig ~/.kube/other-config
 
 # Use specific context
-wtfk8s watch pods --context other-context
+kubectl yadt watch pods --context other-context
 ```
 
 ### List Available Resources
 
 ```bash
 # Show all resources that can be watched
-wtfk8s resources
+kubectl yadt resources
 ```
 
 ## Interactive Mode
 
-When running `wtfk8s watch` without arguments, you'll enter interactive mode:
+When running `kubectl yadt watch` without arguments, you'll enter interactive mode:
 
 1. Use ↑/↓ arrows to navigate resources
 2. Type to filter resources

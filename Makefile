@@ -1,5 +1,5 @@
 # Build parameters
-BINARY_NAME=wtfk8s
+BINARY_NAME=kubectl-yadt
 VERSION?=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.Version=${VERSION}"
 GO=go
@@ -48,7 +48,7 @@ release: ## Create and push a new tag
 	git push origin ${VERSION}
 
 docker: ## Build docker image
-	docker build -t wtfk8s:${VERSION} .
+	docker build -t kubectl-yadt:${VERSION} .
 
 help: ## Display this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
