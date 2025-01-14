@@ -43,11 +43,11 @@ func init() {
 
 func watchRun(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		resource, err := selectResource()
+		resources, err := selectResource()
 		if err != nil {
 			return err
 		}
-		args = []string{resource}
+		args = resources
 	}
 
 	if debug {
@@ -117,24 +117,25 @@ func watchRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func selectResource() (string, error) {
+func selectResource() ([]string, error) {
 	clientConfig := kubeconfig.GetNonInteractiveClientConfigWithContext(kubeConfig, context)
 	restConfig, err := clientConfig.ClientConfig()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	discovery, err := discovery.NewDiscoveryClientForConfig(restConfig)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	resources, err := discovery.ServerPreferredResources()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var items []string
+	items = append(items, "Done")
 	for _, list := range resources {
 		gv, err := schema.ParseGroupVersion(list.GroupVersion)
 		if err != nil {
@@ -157,22 +158,44 @@ func selectResource() (string, error) {
 		}
 	}
 
-	sort.Strings(items)
+	sort.Strings(items[1:])
 
-	prompt := promptui.Select{
-		Label: "Select Resource",
-		Items: items,
-		Searcher: func(input string, index int) bool {
-			item := items[index]
-			return strings.Contains(strings.ToLower(item), strings.ToLower(input))
-		},
-		Size: 20,
+	var selected []string
+	for {
+		prompt := promptui.Select{
+			Label: fmt.Sprintf("Select Resources (%d selected)", len(selected)),
+			Items: items,
+			Searcher: func(input string, index int) bool {
+				item := items[index]
+				return strings.Contains(strings.ToLower(item), strings.ToLower(input))
+			},
+			Size: 20,
+		}
+
+		_, result, err := prompt.Run()
+		if err != nil {
+			return nil, err
+		}
+
+		if result == "Done" {
+			break
+		}
+
+		found := false
+		for _, s := range selected {
+			if s == result {
+				found = true
+				break
+			}
+		}
+		if !found {
+			selected = append(selected, result)
+		}
 	}
 
-	_, result, err := prompt.Run()
-	if err != nil {
-		return "", err
+	if len(selected) == 0 {
+		return nil, fmt.Errorf("no resources selected")
 	}
 
-	return result, nil
+	return selected, nil
 }
