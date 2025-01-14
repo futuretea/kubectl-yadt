@@ -10,8 +10,8 @@ Watch kubernetes resources and print the delta in changes.
 
 ```
 # Watch all resources and print diffs
-wtfk8s
+wtfk8s watch
 
 # Watch specific resources
-wtfk8s pods clusters.cluster.x-k8s.io
+wtfk8s watch pods clusters.cluster.x-k8s.io
 ```

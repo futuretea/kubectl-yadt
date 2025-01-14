@@ -1,144 +1,83 @@
 package differ
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 
-	jsonpatch "github.com/evanphx/json-patch/v5"
+	"github.com/ibuildthecloud/wtfk8s/pkg/printer"
 	"github.com/rancher/wrangler/pkg/clients"
-	"github.com/rancher/wrangler/pkg/gvk"
-	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type Differ struct {
-	cache  map[string]runtime.Object
-	mapper meta.RESTMapper
+	printer *printer.DiffPrinter
+	clients *clients.Clients
+	cache   map[string]*unstructured.Unstructured
 }
 
 func New(clients *clients.Clients) (*Differ, error) {
-	mapper, err := clients.ToRESTMapper()
-	if err != nil {
-		return nil, err
-	}
 	return &Differ{
-		cache:  map[string]runtime.Object{},
-		mapper: mapper,
+		printer: printer.NewPrinter(true),
+		clients: clients,
+		cache:   make(map[string]*unstructured.Unstructured),
 	}, nil
 }
 
 func (d *Differ) Print(obj runtime.Object) error {
-	key, err := key(obj)
-	if err != nil {
-		return err
+	unstructuredObj, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		data, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return err
+		}
+		unstructuredObj = &unstructured.Unstructured{Object: data}
 	}
 
-	meta, err := meta.Accessor(obj)
-	if err != nil {
-		return err
+	key := getKey(unstructuredObj)
+	oldObj := d.cache[key]
+
+	if oldObj == nil {
+		oldObj, _ = d.getCurrentObject(unstructuredObj)
+		if oldObj == nil {
+			oldObj = newEmptyObject(unstructuredObj)
+		}
 	}
 
-	old, ok := d.cache[key]
-	d.cache[key] = obj
-
-	if !ok || meta.GetResourceVersion() == "" {
-		return nil
-	}
-
-	oldBytes, err := toBytes(old)
-	if err != nil {
-		return err
-	}
-
-	newBytes, err := toBytes(obj)
-	if err != nil {
-		return err
-	}
-
-	patch, err := jsonpatch.CreateMergePatch(oldBytes, newBytes)
-	if err != nil {
-		return err
-	}
-
-	printKey, err := printKey(obj, d.mapper)
-	if err != nil {
-		return err
-	}
-
-	if string(patch) != "{}" {
-		fmt.Printf("%s %s %s\n", meta.GetResourceVersion(), printKey, patch)
-	}
-
-	return nil
+	d.cache[key] = unstructuredObj.DeepCopy()
+	return d.printer.Print(oldObj, unstructuredObj)
 }
 
-func clearRevision(obj runtime.Object) (runtime.Object, error) {
-	obj = obj.DeepCopyObject()
-	meta, err := meta.Accessor(obj)
-	if err != nil {
-		return nil, err
-	}
-	meta.SetResourceVersion("")
-	return obj, nil
-}
-
-func toBytes(obj runtime.Object) ([]byte, error) {
-	obj, err := clearRevision(obj)
+func (d *Differ) getCurrentObject(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	result, err := d.clients.Dynamic.Get(obj.GroupVersionKind(), obj.GetNamespace(), obj.GetName())
 	if err != nil {
 		return nil, err
 	}
 
-	return json.Marshal(obj)
+	data, err := runtime.DefaultUnstructuredConverter.ToUnstructured(result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &unstructured.Unstructured{Object: data}, nil
 }
 
-func printKey(obj runtime.Object, mapper meta.RESTMapper) (string, error) {
-	gvk, err := gvk.Get(obj)
-	if err != nil {
-		return "", err
-	}
-
-	meta, err := meta.Accessor(obj)
-	if err != nil {
-		return "", err
-	}
-
-	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-	if err != nil {
-		return "", err
-	}
-
-	buf := &strings.Builder{}
-	buf.WriteString(mapping.Resource.Resource)
-	if gvk.Group != "" {
-		buf.WriteString(".")
-		buf.WriteString(gvk.Group)
-	}
-	buf.WriteString(" ")
-	if meta.GetNamespace() != "" {
-		buf.WriteString(meta.GetNamespace())
-		buf.WriteString("/")
-	}
-	buf.WriteString(meta.GetName())
-	return buf.String(), nil
+func getKey(obj *unstructured.Unstructured) string {
+	return fmt.Sprintf("%s/%s/%s/%s",
+		obj.GetAPIVersion(),
+		obj.GetKind(),
+		obj.GetNamespace(),
+		obj.GetName())
 }
 
-func key(obj runtime.Object) (string, error) {
-	meta, err := meta.Accessor(obj)
-	if err != nil {
-		return "", err
+func newEmptyObject(obj *unstructured.Unstructured) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": obj.GetAPIVersion(),
+			"kind":       obj.GetKind(),
+			"metadata": map[string]interface{}{
+				"name":      obj.GetName(),
+				"namespace": obj.GetNamespace(),
+			},
+		},
 	}
-	id := strings.Builder{}
-	if meta.GetNamespace() != "" {
-		id.WriteString(meta.GetNamespace())
-		id.WriteString("/")
-	}
-	id.WriteString(meta.GetName())
-	id.WriteString(" ")
-	gvk, err := gvk.Get(obj)
-	if err != nil {
-		return "", err
-	}
-	id.WriteString(gvk.String())
-	return id.String(), nil
 }
