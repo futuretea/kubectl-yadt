@@ -21,7 +21,9 @@ import (
 )
 
 var (
-	debug bool
+	debug    bool
+	noStatus bool
+	noMeta   bool
 )
 
 var watchCmd = &cobra.Command{
@@ -35,6 +37,8 @@ Example: wtfk8s watch pods deployments`,
 func init() {
 	rootCmd.AddCommand(watchCmd)
 	watchCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug logging")
+	watchCmd.Flags().BoolVar(&noStatus, "no-status", false, "Ignore status changes")
+	watchCmd.Flags().BoolVar(&noMeta, "no-meta", false, "Ignore metadata changes")
 }
 
 func watchRun(cmd *cobra.Command, args []string) error {
@@ -85,6 +89,8 @@ func watchRun(cmd *cobra.Command, args []string) error {
 		logrus.WithError(err).Debug("Failed to create differ")
 		return err
 	}
+	differ.SetIgnoreStatus(noStatus)
+	differ.SetIgnoreMeta(noMeta)
 
 	logrus.Debug("Starting to watch resources")
 	objs, err := watcher.Start(ctx)

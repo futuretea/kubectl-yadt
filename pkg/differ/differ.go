@@ -10,9 +10,11 @@ import (
 )
 
 type Differ struct {
-	printer *printer.DiffPrinter
-	clients *clients.Clients
-	cache   map[string]*unstructured.Unstructured
+	printer      *printer.DiffPrinter
+	clients      *clients.Clients
+	cache        map[string]*unstructured.Unstructured
+	ignoreStatus bool
+	ignoreMeta   bool
 }
 
 func New(clients *clients.Clients) (*Differ, error) {
@@ -21,6 +23,14 @@ func New(clients *clients.Clients) (*Differ, error) {
 		clients: clients,
 		cache:   make(map[string]*unstructured.Unstructured),
 	}, nil
+}
+
+func (d *Differ) SetIgnoreStatus(ignore bool) {
+	d.ignoreStatus = ignore
+}
+
+func (d *Differ) SetIgnoreMeta(ignore bool) {
+	d.ignoreMeta = ignore
 }
 
 func (d *Differ) Print(obj runtime.Object) error {
@@ -44,6 +54,30 @@ func (d *Differ) Print(obj runtime.Object) error {
 	}
 
 	d.cache[key] = unstructuredObj.DeepCopy()
+
+	if d.ignoreStatus {
+		delete(oldObj.Object, "status")
+		delete(unstructuredObj.Object, "status")
+	}
+
+	if d.ignoreMeta {
+		// Keep only essential metadata fields
+		if meta, ok := oldObj.Object["metadata"].(map[string]interface{}); ok {
+			cleanMeta := map[string]interface{}{
+				"name":      meta["name"],
+				"namespace": meta["namespace"],
+			}
+			oldObj.Object["metadata"] = cleanMeta
+		}
+		if meta, ok := unstructuredObj.Object["metadata"].(map[string]interface{}); ok {
+			cleanMeta := map[string]interface{}{
+				"name":      meta["name"],
+				"namespace": meta["namespace"],
+			}
+			unstructuredObj.Object["metadata"] = cleanMeta
+		}
+	}
+
 	return d.printer.Print(oldObj, unstructuredObj)
 }
 

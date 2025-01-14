@@ -32,6 +32,35 @@ func NewPrinter(showTimestamp bool) *DiffPrinter {
 }
 
 func (p *DiffPrinter) Print(oldObj, newObj *unstructured.Unstructured) error {
+	// Deep copy objects to avoid modifying originals
+	oldData := oldObj.DeepCopy()
+	newData := newObj.DeepCopy()
+
+	// Get fields for comparison
+	oldFields := make(map[string]interface{})
+	newFields := make(map[string]interface{})
+
+	// Always include spec
+	if spec, ok := oldData.Object["spec"]; ok {
+		oldFields["spec"] = spec
+	}
+	if spec, ok := newData.Object["spec"]; ok {
+		newFields["spec"] = spec
+	}
+
+	// Include status if not ignored
+	if status, ok := oldData.Object["status"]; ok {
+		oldFields["status"] = status
+	}
+	if status, ok := newData.Object["status"]; ok {
+		newFields["status"] = status
+	}
+
+	// Compare filtered objects and check if there are any differences
+	if p.areObjectsEqual(oldFields, newFields) {
+		return nil
+	}
+
 	// Format header
 	name := newObj.GetName()
 	namespace := newObj.GetNamespace()
@@ -70,23 +99,6 @@ func (p *DiffPrinter) Print(oldObj, newObj *unstructured.Unstructured) error {
 		}
 		fmt.Println()
 		return nil
-	}
-
-	// Get specs and status for comparison
-	oldFields := make(map[string]interface{})
-	if spec, ok := oldObj.Object["spec"]; ok {
-		oldFields["spec"] = spec
-	}
-	if status, ok := oldObj.Object["status"]; ok {
-		oldFields["status"] = status
-	}
-
-	newFields := make(map[string]interface{})
-	if spec, ok := newObj.Object["spec"]; ok {
-		newFields["spec"] = spec
-	}
-	if status, ok := newObj.Object["status"]; ok {
-		newFields["status"] = status
 	}
 
 	// Print the diff
@@ -257,4 +269,61 @@ func (p *DiffPrinter) printSection(name string, val interface{}, isAdd bool) {
 			fmt.Printf("%s  %s\n", colorFunc(prefix), line)
 		}
 	}
+}
+
+// areObjectsEqual compares two objects recursively
+func (p *DiffPrinter) areObjectsEqual(a, b map[string]interface{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for k, v1 := range a {
+		v2, ok := b[k]
+		if !ok {
+			return false
+		}
+
+		switch val1 := v1.(type) {
+		case map[string]interface{}:
+			if val2, ok := v2.(map[string]interface{}); !ok || !p.areObjectsEqual(val1, val2) {
+				return false
+			}
+		case []interface{}:
+			if val2, ok := v2.([]interface{}); !ok || !p.areSlicesEqual(val1, val2) {
+				return false
+			}
+		default:
+			if v1 != v2 {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// areSlicesEqual compares two slices recursively
+func (p *DiffPrinter) areSlicesEqual(a, b []interface{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		switch v1 := a[i].(type) {
+		case map[string]interface{}:
+			if v2, ok := b[i].(map[string]interface{}); !ok || !p.areObjectsEqual(v1, v2) {
+				return false
+			}
+		case []interface{}:
+			if v2, ok := b[i].([]interface{}); !ok || !p.areSlicesEqual(v1, v2) {
+				return false
+			}
+		default:
+			if a[i] != b[i] {
+				return false
+			}
+		}
+	}
+
+	return true
 }
